@@ -1795,6 +1795,7 @@
       b.addEventListener("click", function(e){
         e.stopPropagation();
         SEL = i;
+        S.curVessel = false; S.curCustom = false;   // 换瓷种即回到该种的预设纹样
         loadPatch(v.patch);
         Array.prototype.forEach.call(menu.children, function(x){ x.setAttribute("aria-pressed", "false"); });
         b.setAttribute("aria-pressed", "true");
@@ -1973,7 +1974,7 @@
   var tubeDrag = null;
   window.addEventListener("pointerdown", function(e){
     if (S.screen !== "tube") return;
-    if (e.target.closest && e.target.closest(".hud, .info, .exit")) return;
+    if (e.target.closest && e.target.closest(".hud, .info, .exit, .volPop, .pick, .start, input[type=range]")) return;
     tubeDrag = { x: e.clientX, y: e.clientY, rot: S.rotAuto, zoom: S.zoomT };
     wakeHud();
   });
