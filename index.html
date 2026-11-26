@@ -1221,24 +1221,39 @@
     try { fn(); } catch (e) { showErr(e); }
   }
 
-  document.getElementById("btnDirect").addEventListener("click", function(){
-    if (S.screen !== "start") return;
-    safeCall(function(){ AU.start(); });
-    safeCall(tryLandscape);
-    S.direct = true;
-    S.screen = "tube";
-    S.a = S.aT = 1; S.m = 1; S.mT = 1;
-    document.body.classList.add("playing", "in-tube");
-    wakeHud();
-  });
 
-  document.getElementById("btnStart").addEventListener("click", function(){
+
+  function startStory(){
     if (S.screen !== "start") return;
     S.screen = "stage";
     document.body.classList.add("playing");
     epigraph();
     safeCall(function(){ AU.start(); });
     safeCall(tryLandscape);
+  }
+  function startDirect(){
+    if (S.screen !== "start") return;
+    S.screen = "tube";
+    S.direct = true;
+    S.a = S.aT = 1; S.m = 1; S.mT = 1;
+    document.body.classList.add("playing", "in-tube");
+    safeCall(function(){ AU.start(); });
+    safeCall(tryLandscape);
+    wakeHud();
+  }
+  /* 桌面用 click，移动端补 touchstart——点下即响应，不等合成事件 */
+  [["btnStart", startStory], ["btnDirect", startDirect]].forEach(function(pair){
+    var el = document.getElementById(pair[0]);
+    if (!el) return;
+    var busy = 0;
+    el.addEventListener("click", function(){ pair[1](); });
+    el.addEventListener("touchstart", function(e){
+      var now = Date.now();
+      if (now - busy < 600) return;
+      busy = now;
+      e.preventDefault();
+      pair[1]();
+    }, { passive: false });
   });
 
   /* ══════════ 对话 ══════════ */
