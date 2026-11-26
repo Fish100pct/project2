@@ -828,6 +828,23 @@
     }
     .startSub{ font-size: 10px; letter-spacing: .14em; }
   }
+  .errChip{
+    position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 60;
+    padding: 8px 10px; border-radius: 3px;
+    background: rgba(140,40,30,.94); color: #fff;
+    font: 11px/1.5 "PingFang SC","Microsoft YaHei",sans-serif;
+    opacity: 0; transform: translateY(8px); pointer-events: none;
+    transition: opacity .3s, transform .3s;
+  }
+  .errChip.on{ opacity: 1; transform: none; }
+  .dbg{
+    position: fixed; left: 6px; right: 6px; bottom: 6px; z-index: 80;
+    max-height: 40vh; overflow: auto; padding: 6px 8px;
+    background: rgba(0,0,0,.86); color: #9ff;
+    font: 10px/1.5 ui-monospace,Menlo,monospace;
+    white-space: pre-wrap; word-break: break-all; pointer-events: none;
+    border: 1px solid #0aa; border-radius: 3px;
+  }
 </style>
 </head>
 <body>
@@ -1110,11 +1127,72 @@
   function easeInOut(t){ return t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2; }
   function easeOut(t){ return 1 - Math.pow(1 - t, 3); }
 
+  /* ══════════ 触摸兜底：某些手机浏览器吞掉 click，用 touchend 直接触发 ══════════ */
+  (function(){
+    var ids = ["btnStart", "btnDirect", "hot", "btnEnter"];
+    ids.forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      var lock = 0;
+      el.addEventListener("touchend", function(e){
+        var now = Date.now();
+        if (now - lock < 500) return;      // 防重复
+        lock = now;
+        e.preventDefault();                 // 阻止随后的合成 click，避免执行两次
+        el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      }, { passive: false });
+    });
+  })();
+
+  /* ══════════ 调试面板（加 ?debug=1 才出现） ══════════ */
+  if (location.search.indexOf("debug") >= 0) {
+    var dbgEl = document.createElement("div");
+    dbgEl.className = "dbg";
+    document.body.appendChild(dbgEl);
+    var dbgLog = [];
+    function dlog(t){
+      dbgLog.push(t);
+      if (dbgLog.length > 9) dbgLog.shift();
+      dbgEl.textContent = dbgLog.join("\n");
+    }
+    dlog("UA " + navigator.userAgent.slice(0, 46));
+    dlog("PT " + (window.PointerEvent ? "y" : "n") + "  TS " + ("ontouchstart" in window ? "y" : "n"));
+    ["pointerdown", "touchstart", "click"].forEach(function(ev){
+      document.addEventListener(ev, function(e){
+        var t = e.target;
+        dlog(ev + " → " + (t && (t.id || t.className || t.tagName)));
+      }, true);
+    });
+    setInterval(function(){
+      dbgEl.textContent = dbgLog.join("\n") + "\nSCREEN " + S.screen + "  body:" + document.body.className;
+    }, 300);
+  }
+
+  /* ══════════ 错误可见化（便于手机上定位问题） ══════════ */
+  var errTimer = null;
+  function showErr(e){
+    try{
+      var el = document.getElementById("errChip");
+      if (!el) return;
+      var msg = (e && (e.message || e.name)) ? (e.name + ": " + e.message) : String(e);
+      el.textContent = "⚠ " + msg.slice(0, 90);
+      el.classList.add("on");
+      clearTimeout(errTimer);
+      errTimer = setTimeout(function(){ el.classList.remove("on"); }, 9000);
+    }catch(_){}
+  }
+  window.addEventListener("error", function(e){ if (e && e.message) showErr(e); });
+  window.addEventListener("unhandledrejection", function(e){ showErr(e.reason || "promise"); });
+
   /* ══════════ 开始 ══════════ */
+  function safeCall(fn){
+    try { fn(); } catch (e) { showErr(e); }
+  }
+
   document.getElementById("btnDirect").addEventListener("click", function(){
     if (S.screen !== "start") return;
-    AU.start();
-    tryLandscape();
+    safeCall(function(){ AU.start(); });
+    safeCall(tryLandscape);
     S.direct = true;
     S.screen = "tube";
     S.a = S.aT = 1; S.m = 1; S.mT = 1;
@@ -1124,11 +1202,11 @@
 
   document.getElementById("btnStart").addEventListener("click", function(){
     if (S.screen !== "start") return;
-    AU.start();
-    tryLandscape();
     S.screen = "stage";
     document.body.classList.add("playing");
     epigraph();
+    safeCall(function(){ AU.start(); });
+    safeCall(tryLandscape);
   });
 
   /* ══════════ 对话 ══════════ */
@@ -2316,5 +2394,6 @@
 
 })();
 </script>
+<div class="errChip" id="errChip"></div>
 </body>
 </html>
