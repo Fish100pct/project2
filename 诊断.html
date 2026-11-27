@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>瓷力万花筒 · 设备诊断</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:18px;background:#F3EDE1;color:#1B1713;
+       font-family:"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.7}
+  h1{font-size:19px;margin:0 0 4px;font-family:"Songti SC",serif}
+  .sub{color:#7A5A26;font-size:12px;letter-spacing:.1em;margin-bottom:16px}
+  .btn{display:block;width:100%;padding:18px;margin:0 0 10px;font-size:17px;font-weight:600;
+       border:2px solid #8A6A2F;background:#FBF6EC;color:#1B1713;border-radius:6px}
+  .btn.ok{background:#2E7D32;border-color:#2E7D32;color:#fff}
+  .btn:active{transform:scale(.985)}
+  pre{margin:14px 0 0;padding:12px;background:#1B1713;color:#B9E7C8;border-radius:6px;
+      font-size:11.5px;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+  .bad{color:#FF8A80}
+</style>
+</head>
+<body>
+
+<h1>设备诊断</h1>
+<div class="sub">按顺序点这五个按钮</div>
+
+<button class="btn" id="b1">1　点击测试</button>
+<button class="btn" id="b2">2　点击测试</button>
+<button class="btn" id="b3">3　点击测试</button>
+<button class="btn" id="b4">4　点击测试</button>
+<button class="btn" id="b5">5　点击测试</button>
+
+<pre id="out">正在检测…</pre>
+
+<script>
+(function(){
+  "use strict";
+  var out = document.getElementById("out");
+  var lines = [];
+
+  function log(s){ lines.push(s); out.textContent = lines.join("\n"); }
+
+  log("JS 已执行 ✓");
+  log("UA: " + navigator.userAgent.slice(0, 78));
+
+  var feat = [
+    ["PointerEvent", typeof window.PointerEvent],
+    ["TouchEvent",   typeof window.TouchEvent],
+    ["Touch",        typeof window.Touch],
+    ["AudioContext", typeof (window.AudioContext || window.webkitAudioContext)],
+    ["WebGL",        (function(){
+        try{
+          var c = document.createElement("canvas");
+          var g = c.getContext("webgl") || c.getContext("experimental-webgl");
+          return g ? "可用" : "不可用";
+        }catch(e){ return "异常 " + e.name; }
+      })()]
+  ];
+  feat.forEach(function(f){ log(f[0] + ": " + f[1]); });
+
+  var hits = 0;
+  function bind(id, label){
+    var el = document.getElementById(id);
+    el.addEventListener("click", function(){
+      el.classList.add("ok");
+      el.textContent = id.toUpperCase() + " 收到 click ✓";
+      hits++;
+      log("—— " + label + " 收到 click（第 " + hits + " 次）");
+    });
+    el.addEventListener("touchstart", function(){
+      log("—— " + label + " 收到 touchstart");
+    }, { passive: true });
+    el.addEventListener("pointerdown", function(){
+      log("—— " + label + " 收到 pointerdown");
+    }, { passive: true });
+  }
+  bind("b1","按钮1"); bind("b2","按钮2"); bind("b3","按钮3");
+  bind("b4","按钮4"); bind("b5","按钮5");
+
+  setTimeout(function(){
+    log("");
+    log(hits === 0
+      ? "五个都点了却没有 click —— 这个浏览器的点击被拦截了"
+      : (hits < 5 ? "只有部分按钮触发 click" : "五个都正常 ✓ 事件没问题"));
+  }, 12000);
+})();
+</script>
+</body>
+</html>
